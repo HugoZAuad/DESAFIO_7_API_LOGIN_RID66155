@@ -4,6 +4,9 @@ import { USER_REPOSITORIES_TOKEN } from "../utils/repositoriesUser.Tokens"
 
 @Injectable()
 export class FindAllUserService {
+  execute() {
+    throw new Error('Method not implemented.')
+  }
   constructor(
     @Inject(USER_REPOSITORIES_TOKEN)
     private readonly userRepositories: IUserRepositories

@@ -5,6 +5,9 @@ import { User } from '../domain/entities/user.entity'
 
 @Injectable()
 export class FindUserByEmailService {
+  execute(arg0: string) {
+    throw new Error('Method not implemented.')
+  }
   constructor(
     @Inject(USER_REPOSITORIES_TOKEN)
     private readonly userRepositories: IUserRepositories

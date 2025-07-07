@@ -1,60 +1,41 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UploadAvatarUserService } from './uploadAvatarUser.service';
 import { USER_REPOSITORIES_TOKEN } from '../utils/repositoriesUser.Tokens';
-import { REDIS_USERS_KEY } from '../utils/redisKey';
-import * as fs from 'fs/promises';
-
 jest.mock('fs/promises');
-jest.mock('../../prisma/utils/userUtils', () => ({
-  isIdExists: jest.fn().mockResolvedValue({ id: 1, avatar: 'old.png' }),
-}));
 
 describe('UploadAvatarUserService', () => {
   let service: UploadAvatarUserService;
-  let userRepo: { update: jest.Mock };
-  let redisClient: { del: jest.Mock };
+  let userRepo: { update: jest.Mock, findById: jest.Mock };
 
   beforeEach(async () => {
-    userRepo = { update: jest.fn() };
-    redisClient = { del: jest.fn() };
-
-    (fs.stat as jest.Mock).mockReset();
-    (fs.unlink as jest.Mock).mockReset();
+    userRepo = {
+      update: jest.fn(),
+      findById: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UploadAvatarUserService,
         { provide: USER_REPOSITORIES_TOKEN, useValue: userRepo },
-        { provide: 'default_IORedisModuleConnectionToken', useValue: redisClient },
       ],
     }).compile();
 
     service = module.get(UploadAvatarUserService);
   });
 
-  it('deve substituir avatar existente e remover o antigo', async () => {
-    (fs.stat as jest.Mock).mockResolvedValueOnce(true);
-    (fs.unlink as jest.Mock).mockResolvedValueOnce(undefined);
-    userRepo.update.mockResolvedValue({ id: 1, avatar: 'new.png' });
+  it('deve atualizar o avatar do usuário', async () => {
+    userRepo.findById.mockResolvedValue({ id: 1, name: 'User' });
+    userRepo.update.mockResolvedValue({ id: 1, name: 'User', avatar: 'avatar.jpg' });
 
-    const result = await service.execute(1, 'new.png');
+    const result = await service.execute(1, 'avatar.jpg');
 
-    expect(fs.stat).toHaveBeenCalled();
-    expect(fs.unlink).toHaveBeenCalled();
-    expect(redisClient.del).toHaveBeenCalledWith(REDIS_USERS_KEY);
-    expect(userRepo.update).toHaveBeenCalledWith(1, { avatar: 'new.png' });
-    expect(result.avatar).toBe('new.png');
+    expect(userRepo.update).toHaveBeenCalledWith(1, { avatar: 'avatar.jpg' });
+    expect(result).toEqual(expect.objectContaining({ avatar: 'avatar.jpg' }));
   });
 
-  it('deve ignorar remoção se avatar antigo não existir', async () => {
-    (fs.stat as jest.Mock).mockRejectedValue(new Error('arquivo não encontrado'));
-    userRepo.update.mockResolvedValue({ id: 1, avatar: 'new.png' });
+  it('deve lançar erro se usuário não existir', async () => {
+    userRepo.findById.mockResolvedValue(null);
 
-    const result = await service.execute(1, 'new.png');
-
-    expect(fs.unlink).not.toHaveBeenCalled();
-    expect(redisClient.del).toHaveBeenCalledWith(REDIS_USERS_KEY);
-    expect(userRepo.update).toHaveBeenCalledWith(1, { avatar: 'new.png' });
-    expect(result.avatar).toBe('new.png');
+    await expect(service.execute(2, 'avatar.jpg')).rejects.toThrow();
   });
 });

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { FindUserByEmailService } from './findUserByEmail.service';
-import { NotFoundException } from '@nestjs/common';
 import { USER_REPOSITORIES_TOKEN } from '../utils/repositoriesUser.Tokens';
+import { NotFoundException } from '@nestjs/common';
 
 describe('FindUserByEmailService', () => {
   let service: FindUserByEmailService;
@@ -20,17 +20,14 @@ describe('FindUserByEmailService', () => {
     service = module.get(FindUserByEmailService);
   });
 
-  it('deve retornar usuário se encontrado', async () => {
-    const user = { id: 1, email: 'joao@mail.com' };
-    userRepo.findByEmail.mockResolvedValue(user);
-
-    const resultado = await service.findByEmail('joao@mail.com');
-
-    expect(resultado).toEqual(user);
+  it('deve retornar usuário pelo email', async () => {
+    userRepo.findByEmail.mockResolvedValue({ id: 1, email: 'user@teste.com' });
+    const result = await service.findByEmail('user@teste.com');
+    expect(result).toEqual({ id: 1, email: 'user@teste.com' });
   });
 
-  it('deve lançar exceção se não encontrar o usuário', async () => {
+  it('deve lançar NotFoundException se usuário não existir', async () => {
     userRepo.findByEmail.mockResolvedValue(null);
-    await expect(service.findByEmail('x@y.com')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.findByEmail('naoexiste@teste.com')).rejects.toThrow(NotFoundException);
   });
 });
